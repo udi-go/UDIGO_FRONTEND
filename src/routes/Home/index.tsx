@@ -1,4 +1,10 @@
+import { MouseEvent } from 'react'
+
+import { useRecoil } from 'hooks/useRecoil'
+import { selectedImageState } from 'states/place'
+
 import styles from './home.module.scss'
+import { useNavigate } from 'react-router-dom'
 
 const IMAGE_BASE_URL = 'https://udigo-image.s3.ap-northeast-2.amazonaws.com/images_en'
 
@@ -18,6 +24,14 @@ const IMAGES = [
 ]
 
 const Home = () => {
+  const [, setSelectedImage] = useRecoil(selectedImageState)
+  const navigate = useNavigate()
+
+  const handleImageClick = (e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>) => {
+    setSelectedImage((e.target as HTMLImageElement).src)
+    navigate('search')
+  }
+
   return (
     <div className={styles.homepage}>
       <section className={styles.introduction}>
@@ -30,7 +44,7 @@ const Home = () => {
         <ul className={styles.sampleImages}>
           {IMAGES.map((image) => (
             <li key={`image-${image}`}>
-              <button type='button'>
+              <button type='button' onClick={handleImageClick}>
                 <img src={`${IMAGE_BASE_URL}/${image}.jpeg`} alt={image} />
               </button>
             </li>

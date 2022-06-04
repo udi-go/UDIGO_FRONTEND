@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 
 import { useRecoil } from 'hooks/useRecoil'
 import { queryState } from 'states/map'
+import { selectedImageState } from 'states/place'
 import { getPlaceInferenceApi } from 'services/place'
 import { IPlaceApiRes } from 'types/place'
 
 import Button from 'components/Button'
+import LoadingSpinner from 'components/LoadingSpinner'
 import { ImageIcon } from 'assets/svgs'
 import styles from './search.module.scss'
-import LoadingSpinner from 'components/LoadingSpinner'
 
 const INIT_TEXT = (
   <p>
@@ -28,11 +29,24 @@ const LOADING_TEXT = (
 
 const Search = () => {
   const [isLoading, setIsLoading] = useState(false)
-  const [imageSrc, setImageSrc] = useState('')
+  const [imageSrc, setImageSrc] = useRecoil(selectedImageState)
   const [imageFile, setImageFile] = useState<File>()
   const [response, setResponse] = useState<IPlaceApiRes>()
   const [, setQuery] = useRecoil(queryState)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const convertURLtoFile = async (url: string) => {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Origin: 'localhost:3000' },
+      mode: 'no-cors',
+    })
+    const data = await res.arrayBuffer()
+    const ext = url.split('.').pop()
+    const filename = url.split('/').pop()
+    const metadata = { type: `image/${ext}` }
+    return new File([data], filename!, metadata)
+  }
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const {
@@ -57,28 +71,32 @@ const Search = () => {
     e.preventDefault()
     setIsLoading(true)
 
-    // const formData = new FormData()
-    // if (!imageFile) return
-    // formData.append('image', imageFile)
+    const formData = new FormData()
 
-    // getPlaceInferenceApi(formData)
-    //   .then((res) => res.json())
-    //   .then((data: IPlaceApiRes) => {
-    //     setResponse(data)
-    //     setQuery(data.label_category)
-    //     setIsLoading(false)
-    //   })
-    //   .catch((err) => console.log(err))
-
-    // TODO: remove dummy data
-    const data: IPlaceApiRes = {
-      label_category: '63빌딩',
-      sentence: '아주 높은 63빌딩이군요!',
+    if (!imageFile) {
+      convertURLtoFile(imageSrc).then((res) => formData.append('image', res))
+    } else {
+      formData.append('image', imageFile)
     }
 
-    setResponse(data)
-    setQuery(data.label_category)
-    setIsLoading(false)
+    getPlaceInferenceApi(formData)
+      .then((res) => res.json())
+      .then((data: IPlaceApiRes) => {
+        setResponse(data)
+        setQuery(data.label_category)
+        setIsLoading(false)
+      })
+      .catch((err) => console.log(err))
+
+    // TODO: remove dummy data
+    // const data: IPlaceApiRes = {
+    //   label_category: '63빌딩',
+    //   sentence: '아주 높은 63빌딩이군요!',
+    // }
+
+    // setResponse(data)
+    // setQuery(data.label_category)
+    // setIsLoading(false)
   }
 
   const handleNewImageButtonClick = () => inputRef.current?.click()
